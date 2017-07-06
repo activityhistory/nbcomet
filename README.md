@@ -28,8 +28,8 @@ from your default python version (e.g. what shows up when you run `python -v` in
 extension onto by modifying the pip command:
 
 ```
-pip-2.7 install nbcomet
-pip-3.5 install nbcomet
+pip2.7 install nbcomet
+pip3.5 install nbcomet
 ```
 
 For more detailed assistance with loading Jupyter Notebook extensions, see the 
