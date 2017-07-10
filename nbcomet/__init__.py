@@ -123,15 +123,6 @@ def save_changes(os_path, action_data, db_manager, track_git=True,
             if not was_saved_recently(version_dir):
                 nbformat.write(current_nb, ver_fname, nbformat.NO_CONVERT)
 
-        #TODO git takes a long time to finish, so consider throttling
-        # track file changes with git
-        # if track_git:
-        #     try:
-        #         verify_git_repository(dest_dir)
-        #         git_commit(fname, dest_dir)
-        #     except:
-        #         pass
-
 def _jupyter_server_extension_paths():
     """
     Jupyter server configuration
