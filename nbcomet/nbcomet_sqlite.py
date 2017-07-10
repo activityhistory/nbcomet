@@ -8,7 +8,7 @@ import sqlite3
 import nbformat
 from threading import Timer
 
-from nbcomet.nbcomet_diff import get_diff_at_indices, indices_to_check, get_action_diff
+from nbcomet.nbcomet_diff import get_nb_diff
 
 
 class DbManager(object):
@@ -72,7 +72,7 @@ class DbManager(object):
         """
 
         # handle edge cases of copy-cell and undo-cell-deletion events
-        diff = get_action_diff(action_data, dest_fname)
+        diff = get_nb_diff(action_data, dest_fname, True)
 
         # don't track extraneous events
         if action_data['name'] in ['unselect-cell'] and diff == {}:

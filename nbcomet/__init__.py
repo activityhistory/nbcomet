@@ -10,7 +10,7 @@ import nbformat
 from notebook.utils import url_path_join
 from notebook.base.handlers import IPythonHandler, path_regex
 
-from .nbcomet_diff import get_diff_at_indices
+from .nbcomet_diff import get_nb_diff
 from .nbcomet_git import verify_git_repository, git_commit
 from .nbcomet_sqlite import DbManager
 from .nbcomet_dir import find_storage_dir, create_dir, was_saved_recently, hash_path
@@ -110,9 +110,8 @@ def save_changes(os_path, action_data, db_manager, track_git=True,
             db_manager.record_action_to_db(action_data, dest_fname)
 
         # save file versions and only continue if nb has meaningfully changed
-        if os.path.isfile(dest_fname):
-            all_cells = list(range(len(current_nb['cells'])))
-            diff = get_diff_at_indices(all_cells, action_data, dest_fname, True)
+        if os.path.isfile(dest_fname):            
+            diff = get_nb_diff(action_data, dest_fname, True)
             if not diff:
                 return
 
@@ -134,24 +133,31 @@ def save_changes(os_path, action_data, db_manager, track_git=True,
         #         pass
 
 def _jupyter_server_extension_paths():
+    """
+    Jupyter server configuration
+    returns dictionary with where to find server extension files
+    """
     return [{
         "module": "nbcomet"
     }]
 
-# Jupyter Extension points
 def _jupyter_nbextension_paths():
+    """
+    Jupyter nbextension configuration
+    returns dictionary with where to find nbextension files
+    """
     return [dict(
         section="notebook",
-        # the path is relative to the `my_fancy_module` directory
+        # the path is relative to the `nbcomet` directory
         src="static",
-        # directory in the `nbextension/` namespace
+        # directory in the `nbcomet/` namespace
         dest="nbcomet",
-        # _also_ in the `nbextension/` namespace
+        # _also_ in the `nbcomet/` namespace
         require="nbcomet/main")]
 
 def load_jupyter_server_extension(nb_app):
     """
-    Load the extension and set up routing to proper handler
+    Load the server extension and set up routing to proper handler
     nb_app: (obj) Jupyter Notebook Application
     """
 
