@@ -4,7 +4,6 @@ nbcomet: Jupyter Notebook extension to track notebook history
 
 import os
 import nbformat
-import nbdime
 
 
 def get_nb_diff(action_data, dest_fname, compare_outputs = False):
