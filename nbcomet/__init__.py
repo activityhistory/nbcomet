@@ -67,7 +67,8 @@ class NBCometHandler(IPythonHandler):
         # save data
         post_data = self.get_json_body()
         save_changes(os_path, post_data, db_manager)
-        self.finish(json.dumps({'msg': path}))
+        hashed_full_path = os.path.join(hashed_path, fname + file_ext)
+        self.finish(json.dumps({'hashed_nb_path': hashed_full_path}))
 
 def save_changes(os_path, action_data, db_manager, track_git=True,
                 track_versions=True, track_actions=True):

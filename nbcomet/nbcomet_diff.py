@@ -34,23 +34,20 @@ def get_nb_diff(action_data, dest_fname, compare_outputs = False):
                 # get the old and new cell contents
                 cell_a = nb_a[nb_b_cell_ids.index(i)]
                 cell_b = nb_b[nb_b_cell_ids.index(i)]                
-                if cells_different(cell_a, cell_b):
+                if cells_different(cell_a, cell_b, compare_outputs):
                     diff[i] = cell_b
             # the cell is entirely new, so it is part of the diff
             else:
-                diff[i] = nb_b_cell
+                diff[i] = cell_b
     
     # or if no cell ids, rely on more targeted method based on type of action
     else:
         action = action_data['name']
         selected_index = action_data['index']
         selected_indices = action_data['indices']
-        
-        len_a = len(nb_a)
-        len_b = len(nb_b)
 
         check_indices = indices_to_check(action, selected_index, 
-                                        selected_indices, len_b, len_a)        
+                                        selected_indices, nb_a, nb_b)        
         for i in check_indices:
             # don't compare cells that don't exist in the current notebook
             if i >= len_b:
@@ -61,7 +58,7 @@ def get_nb_diff(action_data, dest_fname, compare_outputs = False):
             else:
                 cell_a = nb_a[i]
                 cell_b = nb_b[i]                
-                if cells_different(cell_a, cell_b):
+                if cells_different(cell_a, cell_b, compare_outputs):
                     diff[i] = cell_b                            
     return diff
 
@@ -111,7 +108,7 @@ def cells_different(cell_a, cell_b, compare_outputs):
         # compare the outputs one by one
         for j in range(len(cell_b_outs)):
             # check that the output type matches
-            if prior_outs[j]['output_type'] != current_outs[j]['output_type']:
+            if cell_b_outs[j]['output_type'] != cell_a_outs[j]['output_type']:
                 return True            
             # and that the relevant data matches
             elif((cell_a_outs[j]['output_type'] in ["display_data","execute_result"]
@@ -124,15 +121,18 @@ def cells_different(cell_a, cell_b, compare_outputs):
     
     return False
 
-def indices_to_check(action, selected_index, selected_indices, len_current,
-                    len_prior):
+def indices_to_check(action, selected_index, selected_indices, nb_a, nb_b):
     """
     Identify which notebook cells may have changed based on the type of action
     action: (str) action name
     selected_index: (int) single selected cell
     selected_indices: (list of ints) all selected cells
-    len_current: (int) length in cells of the notebook we are comparing
+    nb_a: (dict) one notebook to compare
+    nb_b: (dict) the other notebook to compare
     """
+
+    len_a = len(nb_a)
+    len_b = len(nb_b)
 
     # actions that apply to all selected cells
     if action in['run-cell', 'clear-cell-output', 'change-cell-to-markdown',
@@ -155,20 +155,20 @@ def indices_to_check(action, selected_index, selected_indices, len_current,
     # actions that may insert multiple cells
     elif action in ['paste-cell-above']:
         start = selected_indices[0] # first cell in selection
-        num_inserted = len_current - len_prior
+        num_inserted = len_b - len_a
         return [x for x in range(start, start + num_inserted)]
     elif action in ['paste-cell-below']:
         start = selected_indices[-1] + 1 # first cell after last selected
-        num_inserted = len_current - len_prior
+        num_inserted = len_b - len_a
         return [x for x in range(start, start + num_inserted)]
     elif action in ['paste-cell-replace']:
         start = selected_indices[0] # first cell in selelction
-        num_inserted = len_current - len_prior + len(selected_indices)
+        num_inserted = len_b - len_a + len(selected_indices)
         return [x for x in range(start, start + num_inserted)]
 
     # actions to move groups of cells up and down
     elif action in ['move-cell-down']:
-        if selected_indices[-1] < len_current-1:
+        if selected_indices[-1] < len_b-1:
             ind = [x for x in selected_indices]
             ind.append(selected_indices[-1] + 1)
             return ind
@@ -195,22 +195,25 @@ def indices_to_check(action, selected_index, selected_indices, len_current,
     # actions applied to all cells in the notebook, or could affect all cells
     elif action in ['run-all-cells','restart-kernel-and-clear-output',
                     'confirm-restart-kernel-and-run-all-cells']:
-        return [x for x in range(len_current)]     
+        return [x for x in range(len_b)]     
         
     # actions applied to all cells above or below the selected one
     elif action in ['run-all-cells-above']:
         return [x for x in range(selected_index)]
     elif action in ['run-all-cells-below']:
-        return [x for x in range(selected_index, len_current)]   
+        return [x for x in range(selected_index, len_b)]   
     
     # special case for undo deletion which could put a new cell anywhere
     elif action in ['undo-cell-deletion']:
-        num_inserted = len_current - len_prior
+        num_inserted = len_b - len_a
         if num_inserted > 0:
             first_diff = 0
-            for i in range(len_current):
-                if (prior_nb[i]["source"] != current_nb[i]["source"]
-                    or i >= len(prior_nb)): # a new cell at the end of the nb
+            for i in range(len_b):
+                # a new cell at the end of the nb
+                if i >= len(nb_a):
+                    first_diff = i
+                    return range(first_diff, first_diff + num_inserted)
+                elif nb_a[i]["source"] != nb_b[i]["source"]: 
                     first_diff = i
                     return range(first_diff, first_diff + num_inserted)
     
