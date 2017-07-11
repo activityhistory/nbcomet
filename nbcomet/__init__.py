@@ -112,7 +112,7 @@ def save_changes(os_path, action_data, db_manager, track_git=True,
 
         # save file versions and only continue if nb has meaningfully changed
         if os.path.isfile(dest_fname):            
-            diff = get_nb_diff(action_data, dest_fname, True)
+            diff, cell_order = get_nb_diff(action_data, dest_fname, True)
             if not diff:
                 return
 

@@ -22,11 +22,13 @@ def get_nb_diff(action_data, dest_fname, compare_outputs = False):
     nb_a = nbformat.read(dest_fname, nbformat.NO_CONVERT)['cells']
     nb_b = action_data['model']['cells']
     diff = {}
+    cell_order = []
         
     # either use a diff method based on cell ids    
     if valid_ids(nb_a, nb_b):
         nb_a_cell_ids = [c['metadata']['comet_cell_id'] for c in nb_a]
         nb_b_cell_ids = [c['metadata']['comet_cell_id'] for c in nb_b]
+        cell_order = nb_b_cell_ids
         
         for i in nb_b_cell_ids:
             # if it is a cell id seen in prior nb, check if contents changed
@@ -45,6 +47,7 @@ def get_nb_diff(action_data, dest_fname, compare_outputs = False):
         action = action_data['name']
         selected_index = action_data['index']
         selected_indices = action_data['indices']
+        cell_order = list(range(len(nb_b)))
 
         check_indices = indices_to_check(action, selected_index, 
                                         selected_indices, nb_a, nb_b)        
@@ -60,7 +63,7 @@ def get_nb_diff(action_data, dest_fname, compare_outputs = False):
                 cell_b = nb_b[i]                
                 if cells_different(cell_a, cell_b, compare_outputs):
                     diff[i] = cell_b                            
-    return diff
+    return diff, cell_order
 
 def valid_ids(nb_a, nb_b):
     """

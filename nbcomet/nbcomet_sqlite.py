@@ -25,15 +25,16 @@ class DbManager(object):
         self.conn = sqlite3.connect(self.db_path)
         self.c = self.conn.cursor()
         self.c.execute('''CREATE TABLE IF NOT EXISTS actions (time integer,
-        name text, cell_index integer, selected_cells text, diff text)''')
+            name text, cell_index integer, selected_cells text, cell_order text, 
+            diff text)''')
         self.conn.commit()
         self.conn.close()
 
-    def add_to_commit_queue(self, action_data, diff):
+    def add_to_commit_queue(self, action_data, diff, cell_order):
         # add data to the queue
         ad = action_data
         action_data_tuple = (str(ad['time']), ad['name'], str(ad['index']),
-                            str(ad['indices']), pickle.dumps(diff))
+                            str(ad['indices']), cell_order, pickle.dumps(diff))
         self.queue.append(action_data_tuple)
 
         if self.commitTimer:
@@ -55,7 +56,8 @@ class DbManager(object):
         self.c = self.conn.cursor()
 
         try:
-            self.c.executemany('INSERT INTO actions VALUES (?,?,?,?,?)', self.queue)
+            self.c.executemany('INSERT INTO actions VALUES (?,?,?,?,?,?)', 
+                self.queue)
             self.conn.commit()
             self.queue = []
         except:
@@ -72,14 +74,14 @@ class DbManager(object):
         """
 
         # handle edge cases of copy-cell and undo-cell-deletion events
-        diff = get_nb_diff(action_data, dest_fname, True)
+        diff, cell_order = get_nb_diff(action_data, dest_fname, True)
 
         # don't track extraneous events
         if action_data['name'] in ['unselect-cell'] and diff == {}:
             return
 
         # save the data to the database queue
-        self.add_to_commit_queue(action_data, diff)
+        self.add_to_commit_queue(action_data, diff, cell_order)
 
 def get_viewer_data(db):
     # get data for the comet visualization
