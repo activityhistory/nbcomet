@@ -32,7 +32,7 @@ def get_nb_diff(action_data, dest_fname, compare_outputs = False):
             # if it is a cell id seen in prior nb, check if contents changed
             if i in nb_a_cell_ids:                
                 # get the old and new cell contents
-                cell_a = nb_a[nb_b_cell_ids.index(i)]
+                cell_a = nb_a[nb_a_cell_ids.index(i)]
                 cell_b = nb_b[nb_b_cell_ids.index(i)]                
                 if cells_different(cell_a, cell_b, compare_outputs):
                     diff[i] = cell_b
