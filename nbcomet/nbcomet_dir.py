@@ -31,7 +31,7 @@ def create_dir(directory):
     except OSError:
         pass
 
-def was_saved_recently(version_dir, min_time=60):
+def was_saved_recently(version_dir, min_time=300):
     """ check if a previous version of the file has been saved recently
 
     version_dir: (str) dir to look for previous versions
