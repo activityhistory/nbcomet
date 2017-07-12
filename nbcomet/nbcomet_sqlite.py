@@ -34,7 +34,8 @@ class DbManager(object):
         # add data to the queue
         ad = action_data
         action_data_tuple = (str(ad['time']), ad['name'], str(ad['index']),
-                            str(ad['indices']), cell_order, pickle.dumps(diff))
+                            str(ad['indices']), str(cell_order), 
+                            pickle.dumps(diff))
         self.queue.append(action_data_tuple)
 
         if self.commitTimer:
@@ -56,8 +57,7 @@ class DbManager(object):
         self.c = self.conn.cursor()
 
         try:
-            self.c.executemany('INSERT INTO actions VALUES (?,?,?,?,?,?)', 
-                self.queue)
+            self.c.executemany('INSERT INTO actions VALUES (?,?,?,?,?,?)', self.queue)
             self.conn.commit()
             self.queue = []
         except:

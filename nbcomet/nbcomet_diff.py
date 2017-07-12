@@ -17,7 +17,15 @@ def get_nb_diff(action_data, dest_fname, compare_outputs = False):
     
     # don't even compare if the old version of the notebook does not exist
     if not os.path.isfile(dest_fname):
-        return {}
+        diff = {}
+        cell_order = []
+        
+        nb_b = action_data['model']['cells']
+        if valid_ids([], nb_b):
+            cell_order = [c['metadata']['comet_cell_id'] for c in nb_b]
+        else:
+            cell_order = list(range(len(nb_b)))
+        return diff, cell_order
         
     nb_a = nbformat.read(dest_fname, nbformat.NO_CONVERT)['cells']
     nb_b = action_data['model']['cells']
@@ -40,7 +48,7 @@ def get_nb_diff(action_data, dest_fname, compare_outputs = False):
                     diff[i] = cell_b
             # the cell is entirely new, so it is part of the diff
             else:
-                diff[i] = cell_b
+                diff[i] = nb_b[nb_b_cell_ids.index(i)]
     
     # or if no cell ids, rely on more targeted method based on type of action
     else:
