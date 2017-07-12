@@ -11,14 +11,13 @@ from notebook.utils import url_path_join
 from notebook.base.handlers import IPythonHandler, path_regex
 
 from .nbcomet_diff import get_nb_diff
-from .nbcomet_git import verify_git_repository, git_commit
 from .nbcomet_sqlite import DbManager
 from .nbcomet_dir import find_storage_dir, create_dir, was_saved_recently, hash_path
 from .nbcomet_viewer import get_viewer_html
 
 class NBCometHandler(IPythonHandler):
 
-    # initialize sqlite class
+    # manage connections to various sqlite databases
     db_manager_directory = {}
 
     # check if extension loaded by visiting http://localhost:8888/api/nbcomet
@@ -29,6 +28,7 @@ class NBCometHandler(IPythonHandler):
         """
 
         # get unique path to each file using filename and hashed path
+        # we hash the path for a private, short, and unique identifier
         os_dir, fname = os.path.split(self.contents_manager._get_os_path(path))
         fname, file_ext = os.path.splitext(fname)
         hashed_path = hash_path(os_dir)
@@ -44,6 +44,7 @@ class NBCometHandler(IPythonHandler):
         path: (str) relative path to notebook requesting POST
         """
         # get file, directory, and database names
+        # we hash the path for a private, short, and unique identifier
         os_path = self.contents_manager._get_os_path(path)
         os_dir, fname = os.path.split(os_path)
         fname, file_ext = os.path.splitext(fname)
@@ -70,10 +71,10 @@ class NBCometHandler(IPythonHandler):
         hashed_full_path = os.path.join(hashed_path, fname + file_ext)
         self.finish(json.dumps({'hashed_nb_path': hashed_full_path}))
 
-def save_changes(os_path, action_data, db_manager, track_git=True,
-                track_versions=True, track_actions=True):
+def save_changes(os_path, action_data, db_manager, track_versions=True, 
+                    track_actions=True):
     """
-    Track notebook changes with git, periodic snapshots, and action tracking
+    Track notebook changes with periodic snapshots, and action tracking
     os_path: (str) path to notebook as saved on the operating system
     action_data: (dict) action data in the form of
         t: (int) time action was performed
@@ -81,7 +82,6 @@ def save_changes(os_path, action_data, db_manager, track_git=True,
         index: (int) selected index
         indices: (list of ints) selected indices
         model: (dict) notebook JSON
-    track_git: (bool) use git to track changes to the notebook
     track_versions: (bool) periodically save full versions of the notebook
     track_actions: (bool) track individual actions performed on the notebook
     """
