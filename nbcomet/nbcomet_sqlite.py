@@ -83,32 +83,36 @@ class DbManager(object):
         # save the data to the database queue
         self.add_to_commit_queue(action_data, diff, cell_order)
 
-def get_viewer_data(db):
+def get_viewer_data(db, start_time, end_time):
     # get data for the comet visualization
     conn = sqlite3.connect(db)
     c = conn.cursor()
 
-    c.execute("SELECT name FROM actions WHERE name = 'delete-cell' ")
+    search = "SELECT name FROM actions WHERE name = 'delete-cell' AND time BETWEEN " + str(start_time) + " and " + str(end_time)
+    c.execute(search)
     rows = c.fetchall()
     num_deletions = len(rows)
 
     # TODO how to count when multiple cells are selected and run, or run-all?
-    c.execute("SELECT name FROM actions WHERE name LIKE  'run-cell%' ")
+    search = "SELECT name FROM actions WHERE name LIKE 'run-cell%' AND time BETWEEN " + str(start_time) + " and " + str(end_time)
+    c.execute(search)
     rows = c.fetchall()
     num_runs = len(rows)
-
-    c.execute("SELECT time FROM actions")
+    
+    search = "SELECT time FROM actions WHERE time BETWEEN " + str(start_time) + " and " + str(end_time)
+    c.execute(search)
     rows = c.fetchall()
     total_time = 0;
-    start_time = rows[0][0]
-    last_time = rows[0][0]
-    for i in range(1,len(rows)):
-        # use 5 minutes of inactivity as threshold for each editing session
-        if (rows[i][0] - last_time) >= (5 * 60 * 1000) or i == len(rows) - 1:
-            total_time = total_time + last_time - start_time
-            start_time = rows[i][0]
-            last_time = rows[i][0]
-        else:
-            last_time = rows[i][0]
+    if len(rows) > 0:
+        start_time = rows[0][0]
+        last_time = rows[0][0]
+        for i in range(1,len(rows)):
+            # use 5 minutes of inactivity as threshold for each editing session
+            if (rows[i][0] - last_time) >= (5 * 60 * 1000) or i == len(rows) - 1:
+                total_time = total_time + last_time - start_time
+                start_time = rows[i][0]
+                last_time = rows[i][0]
+            else:
+                last_time = rows[i][0]
 
     return (num_deletions, num_runs, total_time/1000)

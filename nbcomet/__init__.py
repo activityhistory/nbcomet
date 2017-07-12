@@ -32,10 +32,10 @@ class NBCometHandler(IPythonHandler):
         os_dir, fname = os.path.split(self.contents_manager._get_os_path(path))
         fname, file_ext = os.path.splitext(fname)
         hashed_path = hash_path(os_dir)
-        data_dir = os.path.join(find_storage_dir(), hashed_path, fname)
+        data_dir = find_storage_dir()
 
         # display visualization of nbcomet data
-        html = get_viewer_html(data_dir, fname)
+        html = get_viewer_html(data_dir, hashed_path, fname)
         self.write(html)
 
     def post(self, path=''):

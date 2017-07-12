@@ -3,28 +3,85 @@ nbcomet: Jupyter Notebook extension to track notebook history
 """
 
 import os
+import time
 import datetime
 import nbformat
 
 from nbcomet.nbcomet_sqlite import get_viewer_data
 
-def get_viewer_html(data_dir, fname):
-    version_dir = os.path.join(data_dir, 'versions')
-    db = os.path.join(data_dir, fname + ".db")
-    numDeletions, numRuns, totalTime = get_viewer_data(db)
+def get_viewer_html(data_dir, hashed_path, fname):
+    # get paths to files and databases
+    nb_path = os.path.join(data_dir, hashed_path, fname, fname + '.ipynb')
+    nb = nbformat.read(nb_path, nbformat.NO_CONVERT)
+    
+    # get the history of names this file has had
+    nb_name_history = [os.path.join(hashed_path, fname), 0]        
+    if "comet_paths" in nb["metadata"]:
+        nb_name_history = nb['metadata']['comet_paths']
+    # turn time of filename into time ranges when file had each name
+    for i, v in enumerate(nb_name_history):
+        if i == len(nb_name_history) - 1:
+            v.append(int(time.time()*1000))
+        else:
+            v.append(nb_name_history[i+1][1])
 
-    if os.path.isdir(version_dir):
-        data = {'name': fname,
-                'editTime': totalTime,
-                'numRuns': numRuns,
-                'numDeletions': numDeletions,
-                'gaps': [],
-                'versions':[]};
-
-        versions = [f for f in os.listdir(version_dir)
-            if os.path.isfile(os.path.join(version_dir, f))
-            and f[-6:] == '.ipynb']
-
+    # get the notebook actions in each range
+    num_deletions = 0
+    num_runs = 0
+    total_time = 0
+    
+    # get the high-level overview about nb use
+    for n in nb_name_history:
+        hp = n[0].split('/')[0]
+        fn = n[0].split('/')[1].split('.')[0]
+        
+        start_time = n[1]
+        end_time = n[2]
+        
+        db = os.path.join(data_dir, hp, fn, fn + ".db")
+        d, r, t = get_viewer_data(db, start_time, end_time)
+        
+        num_deletions += d
+        num_runs += r    
+        total_time += t
+    
+    # set up json datastructure    
+    data = {'name': fname,
+            'editTime': total_time,
+            'numRuns': num_runs,
+            'numDeletions': num_deletions,
+            'gaps': [],
+            'versions':[]};
+    
+    versions = []
+    
+    # get the notebook versions that fall in our specified ranges for each file
+    for n in nb_name_history:
+        hp = n[0].split('/')[0]
+        fn = n[0].split('/')[1].split('.')[0]
+        
+        version_dir = os.path.join(data_dir, hp, fn, 'versions')
+        print(version_dir)
+        if os.path.isdir(version_dir):
+            versions_with_this_name = [ f for f in os.listdir(version_dir)
+                if os.path.isfile(os.path.join(version_dir, f))
+                and f[-6:] == '.ipynb']
+            
+            print(versions_with_this_name)
+            
+            for v in versions_with_this_name:
+                # filter this list to only those in the correct time frame
+                nb_time = datetime.datetime.strptime(v[-32:-6], 
+                    "%Y-%m-%d-%H-%M-%S-%f")
+                start_time = datetime.datetime.fromtimestamp(n[1]/1000) - datetime.timedelta(seconds=1)  
+                end_time = datetime.datetime.fromtimestamp(n[2]/1000)
+                
+                print(nb_time, start_time, end_time)
+                
+                if nb_time < end_time and nb_time > start_time:
+                    versions.append(os.path.join(hp, fn, 'versions', v))
+    
+    if len(versions) > 0:
         for i, v in enumerate(versions):
             if i > 0:
                 #TODO these datetime conversions seem hacky
@@ -38,10 +95,10 @@ def get_viewer_html(data_dir, fname):
                     data['gaps'].append(i)
 
             version_data = {'num': i,
-                            'time': v[-26:],
+                            'time': v[-26:], #TODO I bet this is broken
                             'cells':[]};
 
-            nb_path = os.path.join(version_dir, v)
+            nb_path = os.path.join(data_dir, v)
             nb_cells = nbformat.read(nb_path, nbformat.NO_CONVERT)['cells']
 
             # cells can have multiple outputs , each with a different type
