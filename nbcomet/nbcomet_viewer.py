@@ -61,13 +61,11 @@ def get_viewer_html(data_dir, hashed_path, fname):
         fn = n[0].split('/')[1].split('.')[0]
         
         version_dir = os.path.join(data_dir, hp, fn, 'versions')
-        print(version_dir)
         if os.path.isdir(version_dir):
             versions_with_this_name = [ f for f in os.listdir(version_dir)
                 if os.path.isfile(os.path.join(version_dir, f))
                 and f[-6:] == '.ipynb']
             
-            print(versions_with_this_name)
             
             for v in versions_with_this_name:
                 # filter this list to only those in the correct time frame
@@ -75,8 +73,6 @@ def get_viewer_html(data_dir, hashed_path, fname):
                     "%Y-%m-%d-%H-%M-%S-%f")
                 start_time = datetime.datetime.fromtimestamp(n[1]/1000) - datetime.timedelta(seconds=1)  
                 end_time = datetime.datetime.fromtimestamp(n[2]/1000)
-                
-                print(nb_time, start_time, end_time)
                 
                 if nb_time < end_time and nb_time > start_time:
                     versions.append(os.path.join(hp, fn, 'versions', v))
@@ -132,9 +128,21 @@ def get_viewer_html(data_dir, hashed_path, fname):
                 color: #333;
             }\n
             \n
+            .statbar{
+                width: 100%; 
+                overflow: auto;               
+            }
             .stat{
                 width: 240px;
                 float: left;
+            }
+            h2{
+                padding: 10px 0px 10px 0px;
+                margin: 0px;
+            }
+            p{
+                padding: 0px 0px 10px 0px;
+                margin: 0px;
             }
             </style>\n
             <body>\n
@@ -170,8 +178,15 @@ def get_viewer_html(data_dir, hashed_path, fname):
             d3.select("body")\n
                 .append("hr")\n
             \n
-            var time = d3.select("body")\n
-                .append("div")\n
+            var mainStats = d3.select("body")
+                .append("div")
+                .attr("class","statbar");
+            
+            var versionStats = d3.select("body")
+                .append("div")
+                .attr("class","statbar");
+                
+            var time = mainStats.append("div")\n
                 .attr("class", "stat")\n
                     .append("h2")\n
                     .text(function(){\n
@@ -181,8 +196,7 @@ def get_viewer_html(data_dir, hashed_path, fname):
                         return text;\n
                 })\n
             \n
-            var runs = d3.select("body")\n
-                .append("div")\n
+            var runs = mainStats.append("div")\n
                 .attr("class", "stat")\n
                     .append("h2")\n
                     .text(function(){\n
@@ -190,24 +204,29 @@ def get_viewer_html(data_dir, hashed_path, fname):
                         return text;\n
                 })\n
             \n
-            var deletions = d3.select("body")\n
-                .append("div")\n
+            var deletions = mainStats.append("div")\n
                 .attr("class", "stat")\n
                     .append("h2")\n
                     .text(function(){\n
                         text = data.numDeletions.toString() + " cells deleted";\n
                         return text;\n
                 })\n
-            \n
-            var versions = d3.select("body")\n
-                .append("div")\n
+            
+            var versionName = versionStats.append("div")\n
                 .attr("class", "stat")\n
-                    .append("h2")\n
-                    .text(function(){\n
-                        text = data.versions.length.toString() + " versions";\n
-                        return text;\n
-                })\n
-            \n
+                    .append("p")\n
+                    .text(".")
+            
+            var versionAdditons = versionStats.append("div")\n
+                .attr("class", "stat")\n
+                    .append("p")\n
+                    .text(".")
+            
+            var versionDeletions = versionStats.append("div")\n
+                .attr("class", "stat")\n
+                    .append("p")\n
+                    .text(".")
+            
             var svg = d3.select("body")\n
                 .append("svg")\n
                 .attr("width", width)\n
@@ -215,7 +234,9 @@ def get_viewer_html(data_dir, hashed_path, fname):
             \n
             var nb = svg.selectAll("g")\n
                 .data(data.versions)\n
-                .enter().append("g")\n
+                .enter().append("g")
+                .on("mouseover", function(d){versionName.text("Hi There");})
+                .on("mouseout", function(d){versionName.text(".");});\n
             \n
             nb.each(function(p, j) {\n
                 d3.select(this)\n
