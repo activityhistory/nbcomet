@@ -129,7 +129,8 @@ def get_viewer_html(data_dir, hashed_path, fname):
             }\n
             \n
             .statbar{
-                width: 100%; 
+                width: 100%;
+                height: 40px;
                 overflow: auto;               
             }
             .stat{

@@ -61,10 +61,10 @@ def get_nb_diff(action_data, dest_fname, compare_outputs = False):
                                         selected_indices, nb_a, nb_b)        
         for i in check_indices:
             # don't compare cells that don't exist in the current notebook
-            if i >= len_b:
+            if i >= len(nb_b):
                 continue 
             # if its a new cell at the end of the nb, it is part of the diff
-            elif i >= len_a:
+            elif i >= len(nb_a):
                 diff[i] = nb_b[i]
             else:
                 cell_a = nb_a[i]
