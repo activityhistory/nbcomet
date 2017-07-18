@@ -79,19 +79,28 @@ def get_viewer_html(data_dir, hashed_path, fname):
     
     if len(versions) > 0:
         for i, v in enumerate(versions):
+            
+            current_nb_time = datetime.datetime.strptime(v[-32:-6],
+                "%Y-%m-%d-%H-%M-%S-%f")
+            
             if i > 0:
                 #TODO these datetime conversions seem hacky
-                current_nb_time = datetime.datetime.strptime(v[-32:-6],
-                    "%Y-%m-%d-%H-%M-%S-%f")
+                
                 past_nb_time = datetime.datetime.strptime(versions[i-1][-32:-6],
                     "%Y-%m-%d-%H-%M-%S-%f")
                 time_diff = current_nb_time - past_nb_time
                 # consider 15 minutes of inactivity as a gap in editing
                 if time_diff.total_seconds() >= 15 * 60:
                     data['gaps'].append(i)
+                    
+            nb_name = v[0:-33].split('/')[-1] + '.ipynb'
+            
+            dt = datetime.datetime.strftime(current_nb_time, "%-I:%M %p  %a %b %d, %Y ") 
 
             version_data = {'num': i,
-                            'time': v[-26:], #TODO I bet this is broken
+                            'name': nb_name,
+                            'time': dt,
+                            'cells_changed':[],
                             'cells':[]};
 
             nb_path = os.path.join(data_dir, v)
@@ -100,7 +109,7 @@ def get_viewer_html(data_dir, hashed_path, fname):
             # cells can have multiple outputs , each with a different type
             # here we track the "highest" level output with
             # error > display_data > execute result > stream
-            for c in nb_cells:
+            for i, c in enumerate(nb_cells):
                 cell_type = c.cell_type
                 if c.cell_type == "code":
                     output_types = [x.output_type for x in c.outputs]
@@ -112,8 +121,17 @@ def get_viewer_html(data_dir, hashed_path, fname):
                         cell_type = "execute_result"
                     elif "stream" in output_types:
                         cell_type = "stream"
+                
+                cell_id = i 
+                try:
+                    cell_id = c.metadata.comet_cell_id
+                    
+                except:
+                    pass
 
-                version_data['cells'].append(cell_type)
+                cell_data = [cell_type, cell_id]
+
+                version_data['cells'].append(cell_data)
 
             data['versions'].append(version_data)
 
@@ -218,7 +236,7 @@ def get_viewer_html(data_dir, hashed_path, fname):
                     .append("p")\n
                     .text(".")
             
-            var versionAdditons = versionStats.append("div")\n
+            var versionTime = versionStats.append("div")\n
                 .attr("class", "stat")\n
                     .append("p")\n
                     .text(".")
@@ -236,8 +254,14 @@ def get_viewer_html(data_dir, hashed_path, fname):
             var nb = svg.selectAll("g")\n
                 .data(data.versions)\n
                 .enter().append("g")
-                .on("mouseover", function(d){versionName.text("Hi There");})
-                .on("mouseout", function(d){versionName.text(".");});\n
+                .on("mouseover", function(d){
+                    versionName.text(d.name);
+                    versionTime.text(d.time);
+                })
+                .on("mouseout", function(d){
+                    versionName.text(".");
+                    versionTime.text(".");
+                });\n
             \n
             nb.each(function(p, j) {\n
                 d3.select(this)\n
@@ -246,6 +270,7 @@ def get_viewer_html(data_dir, hashed_path, fname):
                     .enter().append("rect")\n
                     .attr("width", cellSize)\n
                     .attr("height", cellSize)\n
+                    .attr('class', function(d){ return "c-" + d[1] })
                     .attr("x", function(d, i){\n
                         var numGaps = data.gaps.filter(function(x){return x<=j}).length
                         return (j+numGaps)*cellSize; })\n
@@ -259,9 +284,19 @@ def get_viewer_html(data_dir, hashed_path, fname):
                             "execute_result": "grey",
                             "display_data": "#a7ca7d"
                         }
-                        return type_colors[d]
+                        return type_colors[d[0]]
                      })\n
-                    .attr("stroke", "white");\n
+                    .attr("stroke", "white")  
+                    .on('mouseover', function(d){
+                        d3.selectAll("rect")
+                            .style('fill-opacity', 0.5);
+                        d3.selectAll('.c-' + d[1])
+                            .style('fill-opacity', 1.0);
+                    })                  
+                    .on('mouseout', function(d){
+                        d3.selectAll('rect')
+                            .style('fill-opacity', 1.0);
+                    });\n
             });\n
             \n
             var legend = svg.append('g')\n
