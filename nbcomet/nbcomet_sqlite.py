@@ -115,4 +115,8 @@ def get_viewer_data(db, start_time, end_time):
             else:
                 last_time = rows[i][0]
 
-    return (num_deletions, num_runs, total_time/1000)
+    search = "SELECT * FROM actions WHERE time BETWEEN " + str(start_time) + " and " + str(end_time)
+    c.execute(search)
+    all_rows = c.fetchall()
+
+    return (num_deletions, num_runs, total_time/1000, all_rows)
