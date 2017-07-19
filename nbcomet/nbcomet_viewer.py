@@ -45,14 +45,17 @@ def get_action_data(data_dir, prior_names):
         start_time = n[1]
         end_time = n[2]
         
-        db = os.path.join(data_dir, hp, fn, fn + ".db")
-        d, r, t, actions = get_viewer_data(db, start_time, end_time)
-        
-        total_dels += d
-        total_runs += r    
-        total_time += t
-        for a in actions:
-            all_actions.append(list(a))
+        try:
+            db = os.path.join(data_dir, hp, fn, fn + ".db")
+            d, r, t, actions = get_viewer_data(db, start_time, end_time)
+            
+            total_dels += d
+            total_runs += r    
+            total_time += t
+            for a in actions:
+                all_actions.append(list(a))
+        except:
+            print("Had trouble accesing db")
         
     return total_dels, total_runs, total_time, all_actions
 
@@ -71,13 +74,16 @@ def get_saved_versions(prior_names, data_dir, all_actions):
                 and f[-6:] == '.ipynb']
             
             # filter this list to only those in the correct time frame
-            for v in versions_with_this_name:                
-                nb_time = datetime.datetime.strptime(v[-32:-6], 
-                    "%Y-%m-%d-%H-%M-%S-%f")
-                start_time = datetime.datetime.fromtimestamp(n[1]/1000) - datetime.timedelta(seconds=1)  
-                end_time = datetime.datetime.fromtimestamp(n[2]/1000)                
-                if nb_time <= end_time and nb_time >= start_time:
-                    versions.append(os.path.join(hp, fn, 'versions', v))
+            for v in versions_with_this_name:
+                try:                
+                    nb_time = datetime.datetime.strptime(v[-32:-6], 
+                        "%Y-%m-%d-%H-%M-%S-%f")
+                    start_time = datetime.datetime.fromtimestamp(n[1]/1000) - datetime.timedelta(seconds=1)  
+                    end_time = datetime.datetime.fromtimestamp(n[2]/1000)                
+                    if nb_time <= end_time and nb_time >= start_time:
+                        versions.append(os.path.join(hp, fn, 'versions', v))
+                except:
+                    print("Trouble checking time of file versions")
     return versions
 
 def get_activity_gaps(versions):
@@ -87,13 +93,16 @@ def get_activity_gaps(versions):
         # look for gaps of over 15 min in activity
         
         if i > 0:
-            current_nb_time = datetime.datetime.strptime(v[-32:-6],
-                "%Y-%m-%d-%H-%M-%S-%f")
-            past_nb_time = datetime.datetime.strptime(versions[i-1][-32:-6],
-                "%Y-%m-%d-%H-%M-%S-%f")
-            time_diff = current_nb_time - past_nb_time
-            if time_diff.total_seconds() >= 15 * 60:
-                gaps.append([i, time_diff.total_seconds()])
+            try:
+                current_nb_time = datetime.datetime.strptime(v[-32:-6],
+                    "%Y-%m-%d-%H-%M-%S-%f")
+                past_nb_time = datetime.datetime.strptime(versions[i-1][-32:-6],
+                    "%Y-%m-%d-%H-%M-%S-%f")
+                time_diff = current_nb_time - past_nb_time
+                if time_diff.total_seconds() >= 15 * 60:
+                    gaps.append([i, time_diff.total_seconds()])
+            except:
+                print("Trouble checking version time to determine gaps in activity")
     return gaps
 
 def get_cell_data(data_dir, versions, vi, all_actions, last_change):
@@ -101,6 +110,20 @@ def get_cell_data(data_dir, versions, vi, all_actions, last_change):
     
     nb_b_path = os.path.join(data_dir, versions[vi])
     nb_b = nbformat.read(nb_b_path, nbformat.NO_CONVERT)['cells']
+    
+    # get ids of next nb
+    next_cell_ids = []
+    if vi < len(versions) - 1:
+        nb_c_path = nb_b_path = os.path.join(data_dir, versions[vi + 1])
+        nb_c = nbformat.read(nb_c_path, nbformat.NO_CONVERT)['cells']
+            
+        for i, c in enumerate(nb_c):        
+            # get the cell id                 
+            try:
+                cell_id = c.metadata.comet_cell_id                    
+            except:
+                cell_id = i
+            next_cell_ids.append(cell_id)
               
     for i, c in enumerate(nb_b):        
         # get the cell id                 
@@ -129,7 +152,7 @@ def get_cell_data(data_dir, versions, vi, all_actions, last_change):
         if vi == 0 or cell_id not in last_change:
             new_source = c.source
             last_change[cell_id] = [vi, c.source]
-            last_source = 'false'
+            last_source = 'false'            
         # but if we have seen this cell before
         else:            
             if last_change[cell_id][1] == c.source:
@@ -138,9 +161,16 @@ def get_cell_data(data_dir, versions, vi, all_actions, last_change):
             else:
                 new_source = c.source
                 last_source = last_change[cell_id][0]
-                last_change[cell_id] = [vi, c.source]                    
-            
-        cell_data.append( [cell_id, cell_type, new_source, last_source] )
+                last_change[cell_id] = [vi, c.source]        
+        # get deleted metric
+        if vi == len(versions) - 1:
+            deleted = 'false'
+        elif cell_id in next_cell_ids:
+            deleted = 'false'
+        else:
+            deleted = 'true'
+                               
+        cell_data.append( [cell_id, cell_type, new_source, last_source, deleted] )
     
     return cell_data, last_change        
 
@@ -211,7 +241,8 @@ def get_viewer_html(data_dir, hashed_path, fname):
             .legendbar{
                 width: 100%;
                 height: 40px;
-                overflow: auto;               
+                overflow: auto;
+                margin-top: 10px;               
             }            
             .title{
                 float: left;
@@ -247,7 +278,7 @@ def get_viewer_html(data_dir, hashed_path, fname):
                 margin: 0px
             }
             button {
-            	background-color:#007dc1;
+            	background-color:steelblue;
             	-moz-border-radius:3px;
             	-webkit-border-radius:3px;
             	border-radius:3px;
@@ -258,7 +289,9 @@ def get_viewer_html(data_dir, hashed_path, fname):
             	color:#ffffff;
             	font-family:Arial;
             	font-size:14px;
-            	padding:6px 12px;
+            	padding:6px 6px;
+                margin-left: 6px;
+                width: 132px;
             	text-decoration:none;
             }
             button:hover {
@@ -302,14 +335,16 @@ def get_viewer_html(data_dir, hashed_path, fname):
             height = Math.max(height, cellSize * maxLength)\n
 
             var showingChanged = false
+            var showingAddChanged = false
 
             \n
             var legend_colors = [\n
                 ["markdown", "#7da7ca"],\n
-                ["no output", "silver"],\n
-                ["text output", "grey"],\n
-                ["error", "#ca7da7"],\n
-                ["graphical output", "#a7ca7d"]\n
+                ["graph output", "#a7ca7d"],\n
+                ["text output", "#bbbbbb"],\n
+                ["no output", "LightGray"],
+                ["error", "#ca7da7"]\n
+                \n
             ]\n
             \n
             var mainStats = d3.select("body")
@@ -351,10 +386,12 @@ def get_viewer_html(data_dir, hashed_path, fname):
                 .selectAll("rect")\n
                     .data(function(d){return d.cells; })\n
                     .enter().append("rect")\n
-                    .attr("width", cellSize)\n
-                    .attr("height", cellSize)\n
+                    .attr("width", cellSize - 1)\n
+                    .attr("height", cellSize - 1)\n
                     .attr('class', function(d){ return "c-" + d[0] })
                     .classed("changed", function(d){ return d[2] != 'false'})
+                    .classed("added", function(d){ return d[3] == 'false'})
+                    .classed("deleted", function(d){ return d[4] == 'true' })
                     .attr("x", function(d, i){\n
                         var numGaps = data.gaps.filter(function(x){return x[0]<=j}).length
                         return (j+numGaps)*cellSize; })\n
@@ -362,20 +399,35 @@ def get_viewer_html(data_dir, hashed_path, fname):
                     .attr("fill", function(d) {
                         type_colors = {
                             "markdown": "#7da7ca",
-                            "code": "silver",
+                            "code": "LightGray",
                             "error": "#ca7da7",
-                            "stream": "grey",
-                            "execute_result": "grey",
+                            "stream": "#bbbbbb",
+                            "execute_result": "#bbbbbb",
                             "display_data": "#a7ca7d"
                         }
                         return type_colors[d[1]]
                      })\n
                     .attr("stroke", "white")
-                    .on('click', function(d){
-                        d3.selectAll('rect')
-                            .attr('stroke','white')
+                    .attr("stroke-alignment", "inner")
+                    .on('click', function(d){                    
+                        d3.selectAll('rect.selected')
+                            .attr('stroke',function(){
+                                if(showingAddChanged){
+                                    if(d3.select(this).classed("added")){
+                                        return "SeaGreen"
+                                    }
+                                    else if(d3.select(this).classed("deleted")){
+                                        return 'Coral'
+                                    }
+                                    else{
+                                        return 'white'
+                                    }
+                                }
+                                
+                            })
                         d3.select(this)
-                            .attr('stroke', 'orangered')
+                            .attr('stroke', 'steelblue')
+                            .classed('selected', true)
                         
                         versionName.text(data.versions[j].name) 
                         versionTime.text(data.versions[j].time)
@@ -406,7 +458,7 @@ def get_viewer_html(data_dir, hashed_path, fname):
                 .attr('class', 'legendbar')
                 
             var legendsvg = legendbar.append("svg")\n
-                .attr("width", 800)\n
+                .attr("width", 680)\n
                 .attr("height", 40)\n
                 
             var legend = legendsvg.append('g')\n
@@ -447,6 +499,30 @@ def get_viewer_html(data_dir, hashed_path, fname):
                             .style('fill-opacity', 0.3)
                         d3.selectAll("rect.changed")
                             .style('fill-opacity', 1.0)
+                        d3.selectAll("rect.legend")
+                            .style('fill-opacity', 1.0)
+                    }
+                    
+                });
+                
+            var addDelButton = legendbar.append("button")
+                .text("Highlight Add/Del")
+                .on("click", function(d){  
+                    if(showingAddChanged){
+                        showingAddChanged = false
+                        addDelButton.text('Highlight Add/Del')
+                        d3.selectAll("rect.added")
+                            .attr('stroke', 'white')
+                        d3.selectAll("rect.deleted")
+                            .attr('stroke', 'white')
+                    }
+                    else{
+                        showingAddChanged = true
+                        addDelButton.text('Hide Add/Del')
+                        d3.selectAll("rect.added")
+                            .attr('stroke', 'SeaGreen')
+                        d3.selectAll("rect.deleted")
+                            .attr('stroke', 'Coral')
                     }
                     
                 });

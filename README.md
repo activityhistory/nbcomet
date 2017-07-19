@@ -6,16 +6,14 @@ consists of both a server side extension (.py) and a client-side nbextenion
 ## Installation
 ### 1. Install python package
 For your convenience, nbcomet's server and nbextenion are contained in a single
-python package that can be installed with pip. Simply run one of the following 
+python package that can be installed with pip or conda. Simply run one of the following 
 commands in your terminal:
 
  ```
  pip install nbcomet
- ```
  
- or if you prefer, you can download it with conda
+ # or install with conda
  
- ```
  conda install -c adamrule nbcomet
  ```
  
@@ -37,8 +35,8 @@ For more detailed assistance with loading Jupyter Notebook extensions, see the
 
 ### 2. Configure server and notebook extensions
 While nbcomet is now installed, you need to tell Jupyter to run it every time 
-you run a notebook. You can use the following three commands to install and 
-enable the notebook and server extensions:
+you run a notebook. You can use the following three commands to finish 
+installing and enabling the notebook and server extensions:
 
 ```
 jupyter nbextension install --py nbcomet
@@ -58,18 +56,25 @@ jupyter nbextension list
 By default, Comet with store its data in `~/.jupyter/nbcomet`; You can change
 this folder by editing the `notebook.json` configuration file in your
 `~/.jupyter/nbconfig` folder to include a line specifying your data directory.
-For example: `"Comet": {"data_directory": "/full/path/to/directory" }`.
+For example: `"Comet": {"data_directory": "/full/path/to/directory" },`.
 
 ## What Comet Tracks
 Comet tracks how your notebook changes over time. It does so by:
-1. tracking the occurrence of actions such as creating, deleting, moving, or executing cells
+1. tracking the occurrence of actions such as creating, deleting, moving, or 
+executing cells
 2. tracking how your notebook changes as a result of these actions
 
-Comet tracks this information in three ways:
-1. committing every notebook change to a local git repository
-2. periodically saving a full version of the notebook
-3. saving the name and time of every action to an sqlite database
+Comet tracks this information in two ways:
+1. periodically saving a full version of the notebook
+2. saving the name and time of every action performed in the notebook to an 
+sqlite database
 
-Comet is a research tool designed to help scientists in human-computer interaction better understand how people use Jupyter Notebooks. It is primarily a recording tool with limited support for visualizing or reviewing the recorded data.
+
+## Visualization
+Comet is a research tool designed to help scientists in human-computer 
+interaction better understand how people use Jupyter Notebooks. It is primarily 
+a recording tool with limited support for visualizing or reviewing the recorded 
+data. You can see a basic visualization of your notebook activity by selecting
+`Comet > See Comet Data ` in your Jupyter Notebook menu.
 
 ![Comet Extension HistoryFlow Visualization](imgs/historyflow.png)  
