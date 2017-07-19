@@ -8,7 +8,7 @@ import sqlite3
 import nbformat
 from threading import Timer
 
-from nbcomet.nbcomet_diff import get_diff_at_indices, indices_to_check, get_action_diff
+from nbcomet.nbcomet_diff import get_nb_diff
 
 
 class DbManager(object):
@@ -25,15 +25,17 @@ class DbManager(object):
         self.conn = sqlite3.connect(self.db_path)
         self.c = self.conn.cursor()
         self.c.execute('''CREATE TABLE IF NOT EXISTS actions (time integer,
-        name text, cell_index integer, selected_cells text, diff text)''')
+            name text, cell_index integer, selected_cells text, cell_order text, 
+            diff text)''')
         self.conn.commit()
         self.conn.close()
 
-    def add_to_commit_queue(self, action_data, diff):
+    def add_to_commit_queue(self, action_data, diff, cell_order):
         # add data to the queue
         ad = action_data
         action_data_tuple = (str(ad['time']), ad['name'], str(ad['index']),
-                            str(ad['indices']), pickle.dumps(diff))
+                            str(ad['indices']), str(cell_order), 
+                            pickle.dumps(diff))
         self.queue.append(action_data_tuple)
 
         if self.commitTimer:
@@ -55,7 +57,7 @@ class DbManager(object):
         self.c = self.conn.cursor()
 
         try:
-            self.c.executemany('INSERT INTO actions VALUES (?,?,?,?,?)', self.queue)
+            self.c.executemany('INSERT INTO actions VALUES (?,?,?,?,?,?)', self.queue)
             self.conn.commit()
             self.queue = []
         except:
@@ -72,41 +74,49 @@ class DbManager(object):
         """
 
         # handle edge cases of copy-cell and undo-cell-deletion events
-        diff = get_action_diff(action_data, dest_fname)
+        diff, cell_order = get_nb_diff(action_data, dest_fname, True)
 
         # don't track extraneous events
         if action_data['name'] in ['unselect-cell'] and diff == {}:
             return
 
         # save the data to the database queue
-        self.add_to_commit_queue(action_data, diff)
+        self.add_to_commit_queue(action_data, diff, cell_order)
 
-def get_viewer_data(db):
+def get_viewer_data(db, start_time, end_time):
     # get data for the comet visualization
     conn = sqlite3.connect(db)
     c = conn.cursor()
 
-    c.execute("SELECT name FROM actions WHERE name = 'delete-cell' ")
+    search = "SELECT name FROM actions WHERE name = 'delete-cell' AND time BETWEEN " + str(start_time) + " and " + str(end_time)
+    c.execute(search)
     rows = c.fetchall()
     num_deletions = len(rows)
 
     # TODO how to count when multiple cells are selected and run, or run-all?
-    c.execute("SELECT name FROM actions WHERE name LIKE  'run-cell%' ")
+    search = "SELECT name FROM actions WHERE name LIKE 'run-cell%' AND time BETWEEN " + str(start_time) + " and " + str(end_time)
+    c.execute(search)
     rows = c.fetchall()
     num_runs = len(rows)
-
-    c.execute("SELECT time FROM actions")
+    
+    search = "SELECT time FROM actions WHERE time BETWEEN " + str(start_time) + " and " + str(end_time)
+    c.execute(search)
     rows = c.fetchall()
     total_time = 0;
-    start_time = rows[0][0]
-    last_time = rows[0][0]
-    for i in range(1,len(rows)):
-        # use 5 minutes of inactivity as threshold for each editing session
-        if (rows[i][0] - last_time) >= (5 * 60 * 1000) or i == len(rows) - 1:
-            total_time = total_time + last_time - start_time
-            start_time = rows[i][0]
-            last_time = rows[i][0]
-        else:
-            last_time = rows[i][0]
+    if len(rows) > 0:
+        start_time = rows[0][0]
+        last_time = rows[0][0]
+        for i in range(1,len(rows)):
+            # use 5 minutes of inactivity as threshold for each editing session
+            if (rows[i][0] - last_time) >= (5 * 60 * 1000) or i == len(rows) - 1:
+                total_time = total_time + last_time - start_time
+                start_time = rows[i][0]
+                last_time = rows[i][0]
+            else:
+                last_time = rows[i][0]
 
-    return (num_deletions, num_runs, total_time/1000)
+    search = "SELECT * FROM actions WHERE time BETWEEN " + str(start_time) + " and " + str(end_time)
+    c.execute(search)
+    all_rows = c.fetchall()
+
+    return (num_deletions, num_runs, total_time/1000, all_rows)

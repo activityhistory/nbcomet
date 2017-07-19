@@ -10,15 +10,14 @@ import nbformat
 from notebook.utils import url_path_join
 from notebook.base.handlers import IPythonHandler, path_regex
 
-from .nbcomet_diff import get_diff_at_indices
-from .nbcomet_git import verify_git_repository, git_commit
+from .nbcomet_diff import get_nb_diff
 from .nbcomet_sqlite import DbManager
 from .nbcomet_dir import find_storage_dir, create_dir, was_saved_recently, hash_path
 from .nbcomet_viewer import get_viewer_html
 
 class NBCometHandler(IPythonHandler):
 
-    # initialize sqlite class
+    # manage connections to various sqlite databases
     db_manager_directory = {}
 
     # check if extension loaded by visiting http://localhost:8888/api/nbcomet
@@ -29,13 +28,14 @@ class NBCometHandler(IPythonHandler):
         """
 
         # get unique path to each file using filename and hashed path
+        # we hash the path for a private, short, and unique identifier
         os_dir, fname = os.path.split(self.contents_manager._get_os_path(path))
         fname, file_ext = os.path.splitext(fname)
         hashed_path = hash_path(os_dir)
-        data_dir = os.path.join(find_storage_dir(), hashed_path, fname)
+        data_dir = find_storage_dir()
 
         # display visualization of nbcomet data
-        html = get_viewer_html(data_dir, fname)
+        html = get_viewer_html(data_dir, hashed_path, fname)
         self.write(html)
 
     def post(self, path=''):
@@ -44,6 +44,7 @@ class NBCometHandler(IPythonHandler):
         path: (str) relative path to notebook requesting POST
         """
         # get file, directory, and database names
+        # we hash the path for a private, short, and unique identifier
         os_path = self.contents_manager._get_os_path(path)
         os_dir, fname = os.path.split(os_path)
         fname, file_ext = os.path.splitext(fname)
@@ -67,12 +68,13 @@ class NBCometHandler(IPythonHandler):
         # save data
         post_data = self.get_json_body()
         save_changes(os_path, post_data, db_manager)
-        self.finish(json.dumps({'msg': path}))
+        hashed_full_path = os.path.join(hashed_path, fname + file_ext)
+        self.finish(json.dumps({'hashed_nb_path': hashed_full_path}))
 
-def save_changes(os_path, action_data, db_manager, track_git=True,
-                track_versions=True, track_actions=True):
+def save_changes(os_path, action_data, db_manager, track_versions=True, 
+                    track_actions=True):
     """
-    Track notebook changes with git, periodic snapshots, and action tracking
+    Track notebook changes with periodic snapshots, and action tracking
     os_path: (str) path to notebook as saved on the operating system
     action_data: (dict) action data in the form of
         t: (int) time action was performed
@@ -80,7 +82,6 @@ def save_changes(os_path, action_data, db_manager, track_git=True,
         index: (int) selected index
         indices: (list of ints) selected indices
         model: (dict) notebook JSON
-    track_git: (bool) use git to track changes to the notebook
     track_versions: (bool) periodically save full versions of the notebook
     track_actions: (bool) track individual actions performed on the notebook
     """
@@ -110,9 +111,8 @@ def save_changes(os_path, action_data, db_manager, track_git=True,
             db_manager.record_action_to_db(action_data, dest_fname)
 
         # save file versions and only continue if nb has meaningfully changed
-        if os.path.isfile(dest_fname):
-            all_cells = list(range(len(current_nb['cells'])))
-            diff = get_diff_at_indices(all_cells, action_data, dest_fname, True)
+        if os.path.isfile(dest_fname):            
+            diff, cell_order = get_nb_diff(action_data, dest_fname, True)
             if not diff:
                 return
 
@@ -124,34 +124,32 @@ def save_changes(os_path, action_data, db_manager, track_git=True,
             if not was_saved_recently(version_dir):
                 nbformat.write(current_nb, ver_fname, nbformat.NO_CONVERT)
 
-        #TODO git takes a long time to finish, so consider throttling
-        # track file changes with git
-        # if track_git:
-        #     try:
-        #         verify_git_repository(dest_dir)
-        #         git_commit(fname, dest_dir)
-        #     except:
-        #         pass
-
 def _jupyter_server_extension_paths():
+    """
+    Jupyter server configuration
+    returns dictionary with where to find server extension files
+    """
     return [{
         "module": "nbcomet"
     }]
 
-# Jupyter Extension points
 def _jupyter_nbextension_paths():
+    """
+    Jupyter nbextension configuration
+    returns dictionary with where to find nbextension files
+    """
     return [dict(
         section="notebook",
-        # the path is relative to the `my_fancy_module` directory
+        # the path is relative to the `nbcomet` directory
         src="static",
-        # directory in the `nbextension/` namespace
+        # directory in the `nbcomet/` namespace
         dest="nbcomet",
-        # _also_ in the `nbextension/` namespace
+        # _also_ in the `nbcomet/` namespace
         require="nbcomet/main")]
 
 def load_jupyter_server_extension(nb_app):
     """
-    Load the extension and set up routing to proper handler
+    Load the server extension and set up routing to proper handler
     nb_app: (obj) Jupyter Notebook Application
     """
 

@@ -6,9 +6,9 @@ from distutils.core import setup
 
 setup(
     name='nbcomet',
-    version='0.1',
+    version='0.2',
     description='Extension for tracking Jupyter Notebook history',
-    url = 'https://github.com/activityhistory/comet',
+    url = 'https://github.com/activityhistory/nbcomet',
     author='Adam Rule',
     author_email='acrule@ucsd.edu',
     license='BSD-3-Clause',

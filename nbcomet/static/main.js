@@ -149,6 +149,16 @@ define([
         if (Notebook.metadata.comet_tracking === undefined){
             Notebook.metadata.comet_tracking = true;
         }
+        // Generate a random 13-digit hexadecimal string to uniquely identify notebook
+        if (Notebook.metadata.comet_paths === undefined){
+            Notebook.metadata.comet_paths = [];
+            cells = Notebook.get_cells()
+            for(i = 0; i < cells.length; i++){
+                if (cells[i].metadata.comet_cell_id === undefined){
+                    cells[i].metadata.comet_cell_id = Math.random().toString(16).substring(2);
+                }
+            }
+        }        
     }
 
     function toggleCometRecording(){
@@ -159,7 +169,7 @@ define([
         }
         else{
             Notebook.metadata.comet_tracking = !Notebook.metadata.comet_tracking;
-            trackAction(Notebook, Date.now(), 'comet-tracking-on', 0, [0]);
+            trackAction(Notebook, Date.now(), 'comet-tracking-on', 0, [0]);            
         }
         displayCometRecordingStatus();
     }
@@ -204,7 +214,19 @@ define([
                 contentType: 'application/json',
             };
 
-            var response = utils.promising_ajax(url, settings);
+            utils.promising_ajax(url, settings).then(function(value){
+                var hashed_nb_path = value['hashed_nb_path']
+                var paths = Notebook.metadata.comet_paths
+                
+                if(paths.length == 0){
+                    var t = Date.now();
+                    paths.push([hashed_nb_path, t])
+                }
+                else if(paths[paths.length-1][0] != hashed_nb_path){
+                    var t = Date.now();
+                    paths.push([hashed_nb_path, t])
+                }
+            });
         }
     }
 
@@ -395,6 +417,7 @@ define([
         Notebook.__proto__.insert_cell_at_index = function(){
             c = oldInsertCellAtIndex.apply(this, arguments);
             trackChangesToCell(c);
+            c.metadata.comet_cell_id = Math.random().toString(16).substring(2);
             return c;
         }
     }
