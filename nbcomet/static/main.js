@@ -149,16 +149,17 @@ define([
         if (Notebook.metadata.comet_tracking === undefined){
             Notebook.metadata.comet_tracking = true;
         }
-        // Generate a random 13-digit hexadecimal string to uniquely identify notebook
+        // Generate a random 13-digit hexadecimal string to uniquely identify notebook    
         if (Notebook.metadata.comet_paths === undefined){
-            Notebook.metadata.comet_paths = [];
-            cells = Notebook.get_cells()
-            for(i = 0; i < cells.length; i++){
-                if (cells[i].metadata.comet_cell_id === undefined){
-                    cells[i].metadata.comet_cell_id = Math.random().toString(16).substring(2);
-                }
-            }
+            Notebook.metadata.comet_paths = [];            
         }        
+        // check that cells have right metadata
+        cells = Notebook.get_cells()
+        for(i = 0; i < cells.length; i++){
+            if (cells[i].metadata.comet_cell_id === undefined){
+                cells[i].metadata.comet_cell_id = Math.random().toString(16).substring(2);
+            }
+        }
     }
 
     function toggleCometRecording(){
