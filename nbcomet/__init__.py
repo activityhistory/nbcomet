@@ -1,5 +1,5 @@
 """
-nbcomet: Jupyter Notebook extension to track notebook history
+NBComet: Jupyter Notebook extension to track full notebook history
 """
 
 import os
@@ -71,7 +71,7 @@ class NBCometHandler(IPythonHandler):
         hashed_full_path = os.path.join(hashed_path, fname + file_ext)
         self.finish(json.dumps({'hashed_nb_path': hashed_full_path}))
 
-def save_changes(os_path, action_data, db_manager, track_versions=True, 
+def save_changes(os_path, action_data, db_manager, track_versions=True,
                     track_actions=True):
     """
     Track notebook changes with periodic snapshots, and action tracking
@@ -111,7 +111,7 @@ def save_changes(os_path, action_data, db_manager, track_versions=True,
             db_manager.record_action_to_db(action_data, dest_fname)
 
         # save file versions and only continue if nb has meaningfully changed
-        if os.path.isfile(dest_fname):            
+        if os.path.isfile(dest_fname):
             diff, cell_order = get_nb_diff(action_data, dest_fname, True)
             if not diff:
                 return

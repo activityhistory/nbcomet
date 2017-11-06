@@ -1,5 +1,5 @@
 """
-nbcomet: Jupyter Notebook extension to track notebook history
+NBComet: Jupyter Notebook extension to track full notebook history
 """
 
 import os

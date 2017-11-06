@@ -1,5 +1,5 @@
 """
-Comet: Server component of jupyter notebook extension to track notebook use
+NBComet: Jupyter Notebook extension to track full notebook history
 """
 
 from distutils.core import setup

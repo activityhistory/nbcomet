@@ -1,5 +1,5 @@
 """
-nbcomet: Jupyter Notebook extension to track notebook history
+NBComet: Jupyter Notebook extension to track full notebook history
 """
 
 import os
@@ -25,7 +25,7 @@ class DbManager(object):
         self.conn = sqlite3.connect(self.db_path)
         self.c = self.conn.cursor()
         self.c.execute('''CREATE TABLE IF NOT EXISTS actions (time integer,
-            name text, cell_index integer, selected_cells text, cell_order text, 
+            name text, cell_index integer, selected_cells text, cell_order text,
             diff text)''')
         self.conn.commit()
         self.conn.close()
@@ -34,7 +34,7 @@ class DbManager(object):
         # add data to the queue
         ad = action_data
         action_data_tuple = (str(ad['time']), ad['name'], str(ad['index']),
-                            str(ad['indices']), str(cell_order), 
+                            str(ad['indices']), str(cell_order),
                             pickle.dumps(diff))
         self.queue.append(action_data_tuple)
 
@@ -98,7 +98,7 @@ def get_viewer_data(db, start_time, end_time):
     c.execute(search)
     rows = c.fetchall()
     num_runs = len(rows)
-    
+
     search = "SELECT time FROM actions WHERE time BETWEEN " + str(start_time) + " and " + str(end_time)
     c.execute(search)
     rows = c.fetchall()

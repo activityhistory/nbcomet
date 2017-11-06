@@ -1,5 +1,5 @@
 /*
-NBComet:  Jupyter Notebook extension to track notebook history
+NBComet: Jupyter Notebook extension to track full notebook history
 */
 
 define([
@@ -149,10 +149,10 @@ define([
         if (Notebook.metadata.comet_tracking === undefined){
             Notebook.metadata.comet_tracking = true;
         }
-        // Generate a random 13-digit hexadecimal string to uniquely identify notebook    
+        // Generate a random 13-digit hexadecimal string to uniquely identify notebook
         if (Notebook.metadata.comet_paths === undefined){
-            Notebook.metadata.comet_paths = [];            
-        }        
+            Notebook.metadata.comet_paths = [];
+        }
         // check that cells have right metadata
         cells = Notebook.get_cells()
         for(i = 0; i < cells.length; i++){
@@ -170,7 +170,7 @@ define([
         }
         else{
             Notebook.metadata.comet_tracking = !Notebook.metadata.comet_tracking;
-            trackAction(Notebook, Date.now(), 'comet-tracking-on', 0, [0]);            
+            trackAction(Notebook, Date.now(), 'comet-tracking-on', 0, [0]);
         }
         displayCometRecordingStatus();
     }
@@ -218,7 +218,7 @@ define([
             utils.promising_ajax(url, settings).then(function(value){
                 var hashed_nb_path = value['hashed_nb_path']
                 var paths = Notebook.metadata.comet_paths
-                
+
                 if(paths.length == 0){
                     var t = Date.now();
                     paths.push([hashed_nb_path, t])
