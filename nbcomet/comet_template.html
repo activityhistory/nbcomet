@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html>
+<style>
+body{
+    width: 960px;
+    margin: auto;
+    font-family: "Helvetica Neue", Helvetica, sans-serif;
+    color: #333;
+}
+
+.titlebar{
+    width: 100%;
+    height: 48px;
+    overflow: auto;
+    margin-top: 20px;
+}
+.legendbar{
+    width: 100%;
+    height: 40px;
+    overflow: auto;
+    margin-top: 10px;
+}
+.title{
+    float: left;
+    margin: 0px;
+}
+.time{
+    float: right;
+    margin: 12px 0px;
+}
+.versionStat{
+    width: 300px;
+    float: left;
+}
+.codeSample{
+    width: 470px;
+    height: 238px;
+    float: left;
+    overflow: scroll;
+    padding: 4px;
+    margin: 0px;
+    margin-bottom: 20px;
+    border: 1px solid #aaa;
+    font-family: "Courier New", Courier, monospace;
+    font-size: 0.8em;
+    white-space: pre-wrap;
+    line-height: 1.3em;
+}
+#window{
+    width: 960px;
+    height: 484px;
+    overflow: scroll;
+    padding: 0px;
+    margin: 0px
+}
+button {
+    background-color:steelblue;
+    -moz-border-radius:3px;
+    -webkit-border-radius:3px;
+    border-radius:3px;
+    border:1px solid #124d77;
+    float: right;
+    display:inline-block;
+    cursor:pointer;
+    color:#ffffff;
+    font-family:Arial;
+    font-size:14px;
+    padding:6px 6px;
+    margin-left: 6px;
+    width: 132px;
+    text-decoration:none;
+}
+button:hover {
+    background-color:#0061a7;
+}
+button:active {
+    position:relative;
+    top:1px;
+}
+}
+h2{
+    padding: 10px 0px 10px 0px;
+    margin: 0px;
+}
+h3{
+    margin: 0px;
+    padding-bottom: 8px;
+    color: #999;
+}
+p{
+    padding: 0px 0px 10px 0px;
+    margin: 0px;
+}
+</style>
+<body>
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script>
+var width = 960;
+var height = 480;
+var cellSize = 16;
+
+var data = {% raw data %}
+
+var maxLength = 0
+for (i = 0; i < data.versions.length; i++){
+    maxLength = Math.max(data.versions[i].cells.length, maxLength)
+}
+
+width = Math.max(width, cellSize * (data.versions.length + data.gaps.length))
+
+height = Math.max(height, cellSize * maxLength)
+
+var showingChanged = false
+var showingAddChanged = false
+
+
+var legend_colors = [
+    ["markdown", "#7da7ca"],
+    ["graph output", "#a7ca7d"],
+    ["text output", "#bbbbbb"],
+    ["no output", "LightGray"],
+    ["error", "#ca7da7"]
+
+]
+
+var mainStats = d3.select("body")
+    .append("div")
+    .attr("class","titlebar");
+
+var title = mainStats.append("h1")
+    .text(data.name)
+    .attr('class', 'title');
+
+var time = mainStats
+        .append("h2")
+        .attr('class', 'time')
+        .text(function(){
+            hours = Math.floor( data.editTime / 3600 );
+            minutes = Math.floor( ( data.editTime - hours * 3600 ) / 60 );
+            text = hours.toString() + "h " + minutes.toString() + "m editing";
+            return text;
+        });
+
+d3.select("body")
+    .append("hr")
+
+var svg_window = d3.select("body")
+    .append("div")
+    .attr("id", "window")
+
+var svg = d3.select("#window")
+    .append("svg")
+    .attr("width", width)
+    .attr("height", height)
+
+var nb = svg.selectAll("g")
+    .data(data.versions)
+    .enter().append("g");
+
+nb.each(function(p, j) {
+    d3.select(this)
+    .selectAll("rect")
+        .data(function(d){return d.cells; })
+        .enter().append("rect")
+        .attr("width", cellSize - 1)
+        .attr("height", cellSize - 1)
+        .attr('class', function(d){ return "c-" + d[0] })
+        .classed("changed", function(d){ return d[2] != 'false'})
+        .classed("added", function(d){ return d[3] == 'false'})
+        .classed("deleted", function(d){ return d[4] == 'true' })
+        .attr("x", function(d, i){
+            var numGaps = data.gaps.filter(function(x){return x[0]<=j}).length
+            return (j+numGaps)*cellSize; })
+        .attr("y", function(d, i) { return i * cellSize; })
+        .attr("fill", function(d) {
+            type_colors = {
+                "markdown": "#7da7ca",
+                "code": "LightGray",
+                "error": "#ca7da7",
+                "stream": "#bbbbbb",
+                "execute_result": "#bbbbbb",
+                "display_data": "#a7ca7d"
+            }
+            return type_colors[d[1]]
+         })
+        .attr("stroke", "white")
+        .attr("stroke-alignment", "inner")
+        .on('click', function(d){
+            d3.selectAll('rect.selected')
+                .attr('stroke',function(){
+                    if(showingAddChanged){
+                        if(d3.select(this).classed("added")){
+                            return "SeaGreen"
+                        }
+                        else if(d3.select(this).classed("deleted")){
+                            return 'Coral'
+                        }
+                        else{
+                            return 'white'
+                        }
+                    }
+
+                })
+            d3.select(this)
+                .attr('stroke', 'steelblue')
+                .classed('selected', true)
+
+            versionName.text(data.versions[j].name)
+            versionTime.text(data.versions[j].time)
+
+            if(d[2] == "false"){
+                src = data.versions[d[3]].cells.filter(e => e[0] == d[0])
+                d3.select('#currentCode')
+                    .text(src[0][2])
+            }
+            else{
+                d3.select('#currentCode')
+                    .text(d[2])
+            }
+            if(d[3] == "false"){
+                d3.select('#priorCode')
+                    .text("")
+            }
+            else{
+                src = data.versions[d[3]].cells.filter(e => e[0] == d[0])
+                d3.select('#priorCode')
+                    .text(src[0][2])
+            }
+        })
+});
+
+var legendbar = d3.select('body')
+    .append('div')
+    .attr('class', 'legendbar')
+
+var legendsvg = legendbar.append("svg")
+    .attr("width", 680)
+    .attr("height", 40)
+
+var legend = legendsvg.append('g')
+
+legend.selectAll("rect.legend")
+    .data(legend_colors)
+    .enter().append("rect")
+    .attr("class", "legend")
+    .attr('x', function(d, i){return 128 * i})
+    .attr('y', 12)
+    .attr('width', 16)
+    .attr('height', 16)
+    .style("fill", function(d){return d[1];})
+    .attr('stroke', 'white');
+
+legend.selectAll("text.legend")
+    .data(legend_colors)
+    .enter().append("text")
+    .attr("class", "legend")
+    .attr('x', function(d, i){return 128 * i + 24})
+    .attr('y', 24)
+    .text(function(d){ return d[0]; })
+    .attr('fill', '#666');
+
+var changeButton = legendbar.append("button")
+    .text("Highlight Changes")
+    .on("click", function(d){
+        if(showingChanged){
+            showingChanged = false
+            changeButton.text('Highlight Changes')
+            d3.selectAll("rect")
+                .style('fill-opacity', 1.0)
+        }
+        else{
+            showingChanged = true
+            changeButton.text('Hide Changes')
+            d3.selectAll("rect")
+                .style('fill-opacity', 0.3)
+            d3.selectAll("rect.changed")
+                .style('fill-opacity', 1.0)
+            d3.selectAll("rect.legend")
+                .style('fill-opacity', 1.0)
+        }
+
+    });
+
+var addDelButton = legendbar.append("button")
+    .text("Highlight Add/Del")
+    .on("click", function(d){
+        if(showingAddChanged){
+            showingAddChanged = false
+            addDelButton.text('Highlight Add/Del')
+            d3.selectAll("rect.added")
+                .attr('stroke', 'white')
+            d3.selectAll("rect.deleted")
+                .attr('stroke', 'white')
+        }
+        else{
+            showingAddChanged = true
+            addDelButton.text('Hide Add/Del')
+            d3.selectAll("rect.added")
+                .attr('stroke', 'SeaGreen')
+            d3.selectAll("rect.deleted")
+                .attr('stroke', 'Coral')
+        }
+
+    });
+
+var versionStats = d3.select("body")
+    .append('div')
+    .attr('class', 'legendbar')
+
+var versionTime = versionStats.append('p')
+    .attr('class', 'versionStat')
+    .text("")
+
+var versionName = versionStats.append('p')
+    .attr('class', 'versionStat')
+    .text("")
+
+
+
+var priorSource = d3.select("body")
+    .append("div")
+    .attr("class", "codeSample")
+
+priorSource.append("h3")
+        .text("Prior Source")
+
+priorSource.append("div")
+    .attr("id", "priorCode")
+    .text("Select a cell")
+
+var currentSource = d3.select("body")
+    .append("div")
+    .attr("class", "codeSample")
+
+currentSource.append("h3")
+        .text("Current Source")
+
+currentSource.append("div")
+    .attr("id", "currentCode")
+    .text("Select a cell")
+
+</script>
+</body>
+</html>

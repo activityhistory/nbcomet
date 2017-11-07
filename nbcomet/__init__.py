@@ -37,8 +37,11 @@ class NBCometHandler(IPythonHandler):
         data_dir = find_storage_dir()
 
         # display visualization of nbcomet data
-        html = get_viewer_html(data_dir, hashed_path, fname)
-        self.write(html)
+        data = get_viewer_html(data_dir, hashed_path, fname)
+        if len(data['versions']) > 0:
+            self.render("comet_template.html", data = data)
+        else:
+            self.render("comet_template_nodata.html", filename = fname)
 
     def post(self, path=''):
         """
@@ -72,6 +75,9 @@ class NBCometHandler(IPythonHandler):
         save_changes(os_path, post_data, db_manager)
         hashed_full_path = os.path.join(hashed_path, fname + file_ext)
         self.finish(json.dumps({'hashed_nb_path': hashed_full_path}))
+
+    def get_template_path(self):
+        return None
 
 def save_changes(os_path, action_data, db_manager, track_versions=True,
                     track_actions=True):
