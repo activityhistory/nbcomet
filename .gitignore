@@ -2,4 +2,5 @@
 *.pyc
 build/
 dist/
+nbcomet.egg-info/
 MANIFEST
