@@ -12,6 +12,12 @@ import pickle
 from nbcomet.nbcomet_sqlite import get_viewer_data
 from nbcomet.nbcomet_diff import valid_ids
 
+# TODO use html / javascript templates for page rather than injecting code here
+# TODO package current view as "timeline" view that only needs metadata
+# TODO build separate history view that linearly renders every version cell that
+# was executed, cells should not be editable
+# TODO build smart collapsing of history view for redundant cell executions
+# TODO build minimap that shows where edited or run cell is in notebook
 
 def get_prior_filenames(nb, hashed_path, fname):
     # get the history of names this file has had

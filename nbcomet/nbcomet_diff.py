@@ -5,6 +5,7 @@ NBComet: Jupyter Notebook extension to track full notebook history
 import os
 import nbformat
 
+# TODO see if we can use nbdime to do diff, or continue using our own code
 
 def get_nb_diff(action_data, dest_fname, compare_outputs = False):
     """

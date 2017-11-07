@@ -2,6 +2,8 @@
 NBComet: Jupyter Notebook extension to track full notebook history
 */
 
+// TODO add menu item to toggle tracking of only metadata, or also content
+
 define([
     'jquery',
     'base/js/namespace',

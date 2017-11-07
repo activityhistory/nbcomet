@@ -7,6 +7,8 @@ import json
 import datetime
 from hashlib import sha1
 
+# TODO write function docstrings
+
 def find_storage_dir():
     storage_dir = default_storage_dir()
     filename = os.path.expanduser('~/.jupyter/nbconfig/notebook.json')

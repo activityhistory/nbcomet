@@ -10,6 +10,7 @@ from threading import Timer
 
 from nbcomet.nbcomet_diff import get_nb_diff
 
+# TODO enable saving of only metadata, not the actual diff
 
 class DbManager(object):
     def __init__(self, db_key, db_path):

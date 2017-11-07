@@ -15,6 +15,8 @@ from .nbcomet_sqlite import DbManager
 from .nbcomet_dir import find_storage_dir, create_dir, was_saved_recently, hash_path
 from .nbcomet_viewer import get_viewer_html
 
+# TODO remove any id of files by file path, and use unique id instead
+
 class NBCometHandler(IPythonHandler):
 
     # manage connections to various sqlite databases
