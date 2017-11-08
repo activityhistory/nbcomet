@@ -8,6 +8,7 @@ import datetime
 from hashlib import sha1
 
 # TODO write function docstrings
+# TODO enable use on Windows machines (check directory structure)
 
 def find_storage_dir():
     storage_dir = default_storage_dir()

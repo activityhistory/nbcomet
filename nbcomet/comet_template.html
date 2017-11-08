@@ -208,24 +208,6 @@ nb.each(function(p, j) {
             versionName.text(data.versions[j].name)
             versionTime.text(data.versions[j].time)
 
-            if(d[2] == "false"){
-                src = data.versions[d[3]].cells.filter(e => e[0] == d[0])
-                d3.select('#currentCode')
-                    .text(src[0][2])
-            }
-            else{
-                d3.select('#currentCode')
-                    .text(d[2])
-            }
-            if(d[3] == "false"){
-                d3.select('#priorCode')
-                    .text("")
-            }
-            else{
-                src = data.versions[d[3]].cells.filter(e => e[0] == d[0])
-                d3.select('#priorCode')
-                    .text(src[0][2])
-            }
         })
 });
 
@@ -314,30 +296,6 @@ var versionTime = versionStats.append('p')
 var versionName = versionStats.append('p')
     .attr('class', 'versionStat')
     .text("")
-
-
-
-var priorSource = d3.select("body")
-    .append("div")
-    .attr("class", "codeSample")
-
-priorSource.append("h3")
-        .text("Prior Source")
-
-priorSource.append("div")
-    .attr("id", "priorCode")
-    .text("Select a cell")
-
-var currentSource = d3.select("body")
-    .append("div")
-    .attr("class", "codeSample")
-
-currentSource.append("h3")
-        .text("Current Source")
-
-currentSource.append("div")
-    .attr("id", "currentCode")
-    .text("Select a cell")
 
 </script>
 </body>
